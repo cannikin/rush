@@ -1,0 +1,4 @@
+--- 
+- name: Realtime Giffer (SNS)
+  host: ubuntu@ec2-184-73-46-39.compute-1.amazonaws.com
+  key: ~/.ssh/realtime.pem
