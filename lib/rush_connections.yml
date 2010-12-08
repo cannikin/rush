@@ -1,0 +1,6 @@
+--- 
+- name: Sample Server
+  host: user@myhost.com
+  key: ~/.ssh/myhost.pem    # this is optional if you don't need a key to connect
+- name: Another Server
+  host: user@myotherhost.com

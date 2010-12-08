@@ -1,6 +1,144 @@
 #!/usr/bin/env ruby
-# Thin command line interface script.
-# Run <tt>thin -h</tt> to get more usage.
 
-require 'rush'
-# Thin::Runner.new(ARGV).run!
+# Rush is the Ruby SSH helper. It makes it easy to keep a list of servers that you 
+# connect to without having to constantly look up hostnames and/or SSH keys.
+#
+# It is recommended to make this file executable and add it to your PATH so you can
+# run it from wherever. Rush will create a connections list file in your home
+# directory called `rush_connections.yml`.
+#
+# Type `rush help` for usage.
+
+require 'yaml'
+require 'fileutils'
+
+class Rush
+  
+  CONFIG_FILE_PATH = File.join(File.expand_path('~'), 'rush_connections.yml')
+
+  def initialize(args)
+    @args = args
+    
+    if File.file? CONFIG_FILE_PATH
+      @servers = YAML.load(File.read(File.join(File.expand_path('~'), 'rush_connections.yml')))
+    else
+      @servers = []
+      save
+    end
+    
+    # figure out which command to run
+    puts ""
+    if @args[0].to_i != 0
+      connect(@args[0].to_i)
+    elsif @args[0]
+      self.send(@args[0])
+    else
+      connect
+    end
+    puts ""
+  end
+  
+  private
+  
+    # `rush help`
+    # displays usage info
+    def help
+      puts "  Connect to a server:"
+      puts "    rush [server_number]"
+      puts ""
+      puts "  Show the list of servers:"
+      puts "    rush list"
+      puts ""
+      puts "  Add connection:"
+      puts "    rush add \"Server Name\" user@host.domain.com [path/to/ssh_key.pem]"
+      puts ""
+      puts "  Remove connection:"
+      puts "    rush remove server_number"
+    end
+    
+    # `rush add "Server Name" user@host.domain.com [ssh_key.pem]`
+    # adds a server to the connection list
+    def add
+      if @args[2].nil?
+        puts "  You must provide a host for this connection:"
+        puts "    rush add \"Server Name\" host.domain.com [ssh_key.pem]\n\n"
+        exit 0
+      end
+      
+      name = @args[1]
+      host = @args[2]
+      key = @args[3]
+  
+      new_server = { 'name' => name, 'host' => host }
+      new_server.merge!({'key' => key}) unless key.nil?
+      
+      @servers << new_server
+      save
+  
+      puts "  Server added.\n"
+    end
+    
+    # `rush remove server_number`
+    # removes the selected server number from the connection list
+    def remove
+      if @args[1].nil?
+        puts "  You must include a server number to remove. `rush list` to see all servers.\n\n"
+        exit 0
+      end
+      
+      removed_server = @servers.delete_at(@args[1].to_i-1)
+      save
+  
+      puts "  Server \"#{removed_server['name']}\" removed.\n"
+    end
+    
+    # `rush list`
+    # displays the available servers
+    def list
+      unless @servers.empty?
+        # displays a menu of available servers
+        @servers.each_with_index do |server,i|
+          puts "#{(i+1).to_s.rjust(4)}. #{server['name']}"
+        end
+      else
+        puts "  There are no servers yet! Try `rush add`\n\n"
+        exit 0
+      end
+    end
+    
+    # `rush [server_number]` 
+    # displays the connection list, or connects if you include a server number
+    def connect(choice=nil)
+      unless choice
+        list
+        unless @servers.empty?
+          print "\nConnect to: "
+          choice = gets.chomp!
+        end
+      end
+      
+      if server = @servers[choice.to_i-1]
+        puts "\n  Starting ssh connection...\n"
+        if server['key']
+          command = "ssh -i #{server['key']} #{server['host']}"
+        else
+          command = "ssh #{server['host']}"
+        end
+        puts "    #{command}"
+        exec command
+      else
+        puts "  Server #{choice} not found!\n\n"
+        exit 0
+      end
+    end
+
+    # saves the config file
+    def save
+      File.open(CONFIG_FILE_PATH, 'w') do |f|
+        f.puts @servers.to_yaml
+      end
+    end
+  
+end
+
+Rush.new(ARGV)

@@ -1,0 +1,10 @@
+h1. RUSH
+
+A simple command-line tool for connecting to lots of SSH hosts.
+
+h2. Usage
+
+# Have Ruby installed.
+# Put bin/rush into a location that's in your PATH so that it can be executed from anywhere and make it executable.
+# Copy lib/rush_connections.yml to your home directory and edit with your list of servers.
+# Simply type `rush` at the command line.
